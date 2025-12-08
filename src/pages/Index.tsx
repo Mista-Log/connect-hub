@@ -32,12 +32,6 @@ const Index = () => {
     <div className="min-h-screen bg-background overflow-hidden">
       {/* Hero Section */}
       <header className="relative">
-        {/* Background Effects */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
-          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-3xl animate-float" />
-        </div>
-
         {/* Navigation */}
         <nav className="relative z-10 flex items-center justify-between p-6 max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
@@ -80,9 +74,6 @@ const Index = () => {
             <Button variant="gradient" size="xl" onClick={() => navigate("/auth")} className="group">
               Start Chatting Free
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button variant="glass" size="xl" onClick={() => navigate("/chat")}>
-              View Demo
             </Button>
           </div>
 
