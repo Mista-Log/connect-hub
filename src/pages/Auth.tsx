@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Mail, Lock, User, ArrowRight, MessageCircle } from "lucide-react";
+import { loginUser, signupUser } from "@/api/auth";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -18,19 +19,33 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate authentication - will be connected to Supabase
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success(isLogin ? "Welcome back!" : "Account created successfully!");
+    try {
+      if (isLogin) {
+        const data = await loginUser({ email, password });
+
+        localStorage.setItem("access", data.access);
+        localStorage.setItem("refresh", data.refresh);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        toast.success("Welcome back!");
+      } else {
+        await signupUser({ full_name: name, email, password });
+        toast.success("Account created successfully!");
+      }
+
       navigate("/chat");
-    }, 1500);
+    } catch (error: any) {
+      toast.error(error.message || "Something went wrong");
+    }
+
+    setIsLoading(false);
   };
+
 
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Decorative */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden gradient-surface">
-
         
         <div className="relative z-10 flex flex-col justify-center items-center w-full p-12">
           <div className="flex items-center gap-3 mb-8">
