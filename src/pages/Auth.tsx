@@ -23,8 +23,8 @@ const Auth = () => {
       if (isLogin) {
         const data = await loginUser({ email, password });
 
-        localStorage.setItem("access", data.access);
-        localStorage.setItem("refresh", data.refresh);
+        localStorage.setItem("access", data.tokens.access);
+        localStorage.setItem("refresh", data.tokens.refresh);
         localStorage.setItem("user", JSON.stringify(data.user));
 
         toast.success("Welcome back!");

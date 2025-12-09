@@ -3,6 +3,9 @@ from django.db import models
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin
 )
+from django.conf import settings
+
+# User = settings.AUTH_USER_MODEL
 
 
 class UserManager(BaseUserManager):
@@ -70,3 +73,86 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def name(self):
         return self.full_name
+
+
+class Conversation(models.Model):
+    """
+    A chat room — supports both 1-on-1 and group chats.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    is_group = models.BooleanField(default=False)
+
+    members = models.ManyToManyField(
+        User,
+        related_name="conversations"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Automatically updated when new message is sent
+    last_message = models.ForeignKey(
+        "Message",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="last_message_of"
+    )
+
+    def __str__(self):
+        return f"Conversation {self.id}"
+
+
+
+class Message(models.Model):
+    """
+    Individual messages sent inside a conversation.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name="messages"
+    )
+
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="sent_messages"
+    )
+
+    text = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to="message_images/", blank=True, null=True)
+    file = models.FileField(upload_to="message_files/", blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_edited = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Message {self.id} from {self.sender}"
+
+
+class UnreadMessage(models.Model):
+    """
+    Tracks unread messages for each user.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="unread_messages"
+    )
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name="unread_by"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "message")  # Prevent duplicates
+
+    def __str__(self):
+        return f"{self.user} has not read {self.message}"

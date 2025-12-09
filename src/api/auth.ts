@@ -42,3 +42,42 @@ export const signupUser = async (payload: SignupPayload) => {
 
   return data;
 };
+
+
+export const logoutUser = async () => {
+  const refresh = localStorage.getItem("refresh");
+  const access = localStorage.getItem("access");
+
+  if (!refresh) {
+    throw new Error("No refresh token found");
+  }
+
+  const response = await fetch(`${API_BASE}/logout/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${access}`,
+    },
+    body: JSON.stringify({ refresh }),
+  });
+
+  
+
+  // If response is NOT ok → throw error
+  if (!response.ok) {
+    let err;
+    try {
+      err = await response.json();
+    } catch {
+      throw new Error("Logout failed");
+    }
+    throw new Error(err.detail || "Logout failed");
+  }
+
+  // Some backends return empty body → avoid parsing
+  try {
+    return await response.json();
+  } catch {
+    return { message: "Logged out" };
+  }
+};

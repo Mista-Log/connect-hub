@@ -4,6 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import { logoutUser } from "@/api/auth";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
+
+
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
 interface Conversation {
   id: string;
   name: string;
@@ -73,6 +81,35 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
   const filteredConversations = mockConversations.filter((conv) =>
     conv.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const [open, setOpen] = useState(false);
+
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+
+      console.log("Logging out...");
+
+      await logoutUser();
+      
+
+      // Remove tokens + user data
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
+      localStorage.removeItem("user");
+
+      toast.success("Logged out successfully!");
+
+      navigate("/auth", { replace: true });
+    } catch (error: any) {
+      console.log("Logout error:", error);
+      toast.error(error.message || "Logout failed");
+    }
+
+    setOpen(false);
+  };
+
 
   return (
     <div className="w-80 h-full bg-sidebar flex flex-col border-r border-sidebar-border">
@@ -162,7 +199,7 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
       </div>
 
       {/* User Profile */}
-      <div className="p-3 border-t border-sidebar-border">
+      {/* <div className="p-3 border-t border-sidebar-border">
         <div className="flex items-center gap-3 p-2">
           <div className="relative">
             <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-medium text-primary-foreground">
@@ -178,7 +215,56 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
             <LogOut className="w-4 h-4" />
           </Button>
         </div>
+      </div> */}
+
+      <div className="p-3 border-t border-sidebar-border">
+        <div className="flex items-center gap-3 p-2">
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-medium text-primary-foreground">
+              JD
+            </div>
+            <div className="absolute bottom-0 right-0 w-3 h-3 bg-online rounded-full border-2 border-sidebar" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">John Doe</p>
+            <p className="text-xs text-muted-foreground">Online</p>
+          </div>
+
+          {/* 🚀 Trigger the popup */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={() => setOpen(true)}
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
+
+      {/* 🚀 LOGOUT POPUP */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Logout</DialogTitle>
+          </DialogHeader>
+
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to logout?
+          </p>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+
+            <Button variant="destructive" onClick={handleLogout}>
+              Yes, Logout
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
