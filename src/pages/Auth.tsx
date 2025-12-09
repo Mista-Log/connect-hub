@@ -30,9 +30,7 @@ const Auth = () => {
     <div className="min-h-screen flex">
       {/* Left Panel - Decorative */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden gradient-surface">
-        {/* Glow effects */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse-glow" />
-        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-accent/10 rounded-full blur-3xl animate-float" />
+
         
         <div className="relative z-10 flex flex-col justify-center items-center w-full p-12">
           <div className="flex items-center gap-3 mb-8">
@@ -140,7 +138,7 @@ const Auth = () => {
 
             {isLogin && (
               <div className="text-right">
-                <button type="button" className="text-sm text-primary hover:underline">
+                <button type="button" className="text-sm text-foreground hover:underline">
                   Forgot password?
                 </button>
               </div>
@@ -170,7 +168,7 @@ const Auth = () => {
               <button
                 type="button"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-primary font-medium hover:underline"
+                className="text-foreground font-medium hover:underline"
               >
                 {isLogin ? "Sign up" : "Sign in"}
               </button>
