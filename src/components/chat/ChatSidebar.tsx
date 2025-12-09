@@ -1,16 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, Settings, LogOut, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
 import { logoutUser } from "@/api/auth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-
-
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { createConversation, findUserByEmail, getUserConversations } from "@/api/auth"; // adjust the path
 
 interface Conversation {
   id: string;
@@ -22,53 +19,55 @@ interface Conversation {
   online: boolean;
 }
 
-const mockConversations: Conversation[] = [
-  {
-    id: "1",
-    name: "Sarah Wilson",
-    avatar: "SW",
-    lastMessage: "That sounds great! Let me know...",
-    time: "2m",
-    unread: 3,
-    online: true,
-  },
-  {
-    id: "2",
-    name: "Design Team",
-    avatar: "DT",
-    lastMessage: "Alex: The new mockups are ready",
-    time: "15m",
-    unread: 0,
-    online: false,
-  },
-  {
-    id: "3",
-    name: "Michael Chen",
-    avatar: "MC",
-    lastMessage: "Thanks for the file!",
-    time: "1h",
-    unread: 0,
-    online: true,
-  },
-  {
-    id: "4",
-    name: "Project Alpha",
-    avatar: "PA",
-    lastMessage: "Meeting scheduled for tomorrow",
-    time: "3h",
-    unread: 1,
-    online: false,
-  },
-  {
-    id: "5",
-    name: "Emma Thompson",
-    avatar: "ET",
-    lastMessage: "See you soon! 👋",
-    time: "1d",
-    unread: 0,
-    online: false,
-  },
-];
+// const mockConversations: Conversation[] = [
+//   {
+//     id: "1",
+//     name: "Sarah Wilson",
+//     avatar: "SW",
+//     lastMessage: "That sounds great! Let me know...",
+//     time: "2m",
+//     unread: 3,
+//     online: true,
+//   },
+//   {
+//     id: "2",
+//     name: "Design Team",
+//     avatar: "DT",
+//     lastMessage: "Alex: The new mockups are ready",
+//     time: "15m",
+//     unread: 0,
+//     online: false,
+//   },
+//   {
+//     id: "3",
+//     name: "Michael Chen",
+//     avatar: "MC",
+//     lastMessage: "Thanks for the file!",
+//     time: "1h",
+//     unread: 0,
+//     online: true,
+//   },
+//   {
+//     id: "4",
+//     name: "Project Alpha",
+//     avatar: "PA",
+//     lastMessage: "Meeting scheduled for tomorrow",
+//     time: "3h",
+//     unread: 1,
+//     online: false,
+//   },
+//   {
+//     id: "5",
+//     name: "Emma Thompson",
+//     avatar: "ET",
+//     lastMessage: "See you soon! 👋",
+//     time: "1d",
+//     unread: 0,
+//     online: false,
+//   },
+// ];
+
+
 
 interface ChatSidebarProps {
   activeChat: string | null;
@@ -77,8 +76,15 @@ interface ChatSidebarProps {
 
 const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
   const [search, setSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newMember, setNewMember] = useState("");
+  const [conversations, setConversations] = useState<any[]>([]);
 
-  const filteredConversations = mockConversations.filter((conv) =>
+  // const filteredConversations = mockConversations.filter((conv) =>
+  //   conv.name.toLowerCase().includes(search.toLowerCase())
+  // );
+
+  const filteredConversations = conversations.filter((conv) =>
     conv.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -109,6 +115,60 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
 
     setOpen(false);
   };
+
+  const handleCreateConversation = async () => {
+    try {
+      // 1️⃣ Fetch user by email
+      const user = await findUserByEmail(newMember);
+
+      // 2️⃣ Use user.id (UUID) to create conversation
+      await createConversation(user.id);
+
+      toast.success("Conversation created!");
+      setCreateOpen(false);
+      setNewMember("");
+    } catch (err: any) {
+      toast.error(err.message || "Could not create conversation");
+    }
+  };
+
+  useEffect(() => {
+    const loadConversations = async () => {
+      try {
+        const data = await getUserConversations();
+        const user = JSON.parse(localStorage.getItem("user")!);
+
+        // Transform data for UI
+        const formatted = data.map((conv: any) => {
+          const otherUser = conv.members.find((m: any) => m.id !== user.id);
+
+          return {
+            id: conv.id,
+            name: otherUser?.full_name || "Unknown",
+            avatar: (otherUser?.full_name || "?")
+              .split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .toUpperCase(),
+            lastMessage: "No messages yet...",
+            time: new Date(conv.updated_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            unread: 0,
+            online: false,
+          };
+        });
+
+        setConversations(formatted);
+      } catch (err) {
+        toast.error("Failed to load conversations");
+      }
+    };
+
+    loadConversations();
+  }, []);
+
 
 
   return (
@@ -142,11 +202,46 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
 
       {/* New Chat Button */}
       <div className="p-3">
-        <Button variant="glass" className="w-full justify-start gap-2">
+        <Button 
+          variant="glass" 
+          className="w-full justify-start gap-2"
+          onClick={() => setCreateOpen(true)}
+        >
           <Plus className="w-4 h-4" />
           New Conversation
         </Button>
       </div>
+
+      {/* 🚀 CREATE CONVERSATION POPUP */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Start a New Conversation</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Input
+              placeholder="Enter user email or user ID..."
+              value={newMember}
+              onChange={(e) => setNewMember(e.target.value)}
+            />
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </Button>
+
+            <Button
+              onClick={handleCreateConversation}
+              // className="bg-primary text-white"
+            >
+              Create Conversation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto px-2 pb-4">

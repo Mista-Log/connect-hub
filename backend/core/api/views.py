@@ -9,7 +9,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from .serializers import LogoutSerializer
 from .serializers import RegisterSerializer, LoginSerializer
-from .models import User
+from rest_framework import generics, permissions
+from .models import Conversation, Message, UnreadMessage, User
+from .serializers import ConversationSerializer, MessageSerializer, UserSerializer, ConversationCreateSerializer
 
 
 class RegisterView(APIView):
@@ -78,3 +80,68 @@ class LogoutView(APIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# List all conversations for the logged-in user
+class ConversationListView(generics.ListAPIView):
+    serializer_class = ConversationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return self.request.user.conversations.all().order_by("-last_message__created_at")
+
+class ConversationCreateView(generics.CreateAPIView):
+    serializer_class = ConversationCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Ensure the current user is added automatically
+        conversation = serializer.save()
+        if self.request.user not in conversation.members.all():
+            conversation.members.add(self.request.user)
+            conversation.save()
+
+
+# List messages in a conversation
+class MessageListView(generics.ListAPIView):
+    serializer_class = MessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        conv_id = self.kwargs["conversation_id"]
+        return Message.objects.filter(conversation__id=conv_id).order_by("created_at")
+
+
+# Send a message
+class MessageCreateView(generics.CreateAPIView):
+    serializer_class = MessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        conversation = Conversation.objects.get(id=self.request.data["conversation"])
+        message = serializer.save(sender=self.request.user, conversation=conversation)
+        # Update last message in conversation
+        conversation.last_message = message
+        conversation.save()
+        # Create unread messages for other members
+        for member in conversation.members.exclude(id=self.request.user.id):
+            UnreadMessage.objects.create(user=member, message=message)
+
+
+class FindUserByEmailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        email = request.query_params.get("email")
+        if not email:
+            return Response({"error": "Email is required"}, status=400)
+
+        try:
+            user = User.objects.get(email=email)
+            return Response({
+                "id": str(user.id),
+                "email": user.email,
+                "full_name": user.full_name
+            })
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)

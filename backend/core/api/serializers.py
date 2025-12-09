@@ -1,8 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from .models import User
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-
+from .models import User, Conversation, Message, UnreadMessage
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
@@ -62,3 +61,55 @@ class LogoutSerializer(serializers.Serializer):
             RefreshToken(self.token).blacklist()
         except TokenError:
             raise serializers.ValidationError("Invalid or expired token.")
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "full_name", "email"]
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Message
+        fields = ["id", "conversation", "sender", "text", "image", "file", "created_at", "is_edited"]
+
+
+class ConversationCreateSerializer(serializers.ModelSerializer):
+    # Accept member IDs for creation
+    member_ids = serializers.ListField(
+        child=serializers.UUIDField(), write_only=True
+    )
+
+    class Meta:
+        model = Conversation
+        fields = ["id", "name", "is_group", "member_ids"]
+
+    def create(self, validated_data):
+        member_ids = validated_data.pop("member_ids", [])
+        conversation = Conversation.objects.create(**validated_data)
+
+        # Add members
+        members = User.objects.filter(id__in=member_ids)
+        conversation.members.set(members)
+        conversation.save()
+        return conversation
+
+
+class ConversationSerializer(serializers.ModelSerializer):
+    members = UserSerializer(many=True, read_only=True)
+    last_message = MessageSerializer(read_only=True)
+
+    class Meta:
+        model = Conversation
+        fields = ["id", "name", "is_group", "members", "last_message", "created_at"]
+
+
+class UnreadMessageSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    message = MessageSerializer(read_only=True)
+
+    class Meta:
+        model = UnreadMessage
+        fields = ["id", "user", "message", "created_at"]
