@@ -93,30 +93,42 @@ const ChatWindow = ({ conversation }: ChatWindowProps) => {
 
   useEffect(() => {
     if (!chatId) return;
-    setMessages([]);
+
+    setMessages([]); // clear chat
 
     const loadMessages = async () => {
       try {
         const data = await getMessages(chatId);
-        const formatted = data.map((msg: any) => ({
+
+        // ensure correct structure
+        const messagesArray = Array.isArray(data.messages) ? data.messages : [];
+
+        const formatted = messagesArray.map((msg: any) => ({
           id: msg.id,
           content: msg.content,
-          timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          isOwn: msg.sender_id === JSON.parse(localStorage.getItem("user") || "{}")?.id,
-          status: msg.status,
-          type: msg.type,
+          timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          isOwn:
+            msg.sender_id ===
+            JSON.parse(localStorage.getItem("user") || "{}")?.id,
+          status: msg.status || "sent",
+          type: msg.type || "text",
           fileName: msg.file_name,
           fileSize: msg.file_size,
-          imageUrl: msg.file_url
+          imageUrl: msg.file_url,
         }));
+
         setMessages(formatted);
-      } catch (error) {
-        console.error("Error loading chat messages:", error);
+      } catch (err) {
+        console.error("Error loading chat messages:", err);
       }
     };
 
     loadMessages();
   }, [chatId]);
+
 
   
 
