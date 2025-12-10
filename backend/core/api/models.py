@@ -97,28 +97,36 @@ class Conversation(models.Model):
 
 
 class Message(models.Model):
-    """
-    Individual messages sent inside a conversation.
-    """
+    MESSAGE_TYPES = (
+        ("text", "Text"),
+        ("image", "Image"),
+        ("file", "File"),
+    )
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     conversation = models.ForeignKey(
         Conversation,
         on_delete=models.CASCADE,
         related_name="messages"
     )
+
     sender = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name="sent_messages"
     )
-    text = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to="message_images/", blank=True, null=True)
-    file = models.FileField(upload_to="message_files/", blank=True, null=True)
+
+    content = models.TextField()  # Works for text OR file/image URL
+
+    type = models.CharField(max_length=10, choices=MESSAGE_TYPES, default="text")
+
     created_at = models.DateTimeField(auto_now_add=True)
     is_edited = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.sender.full_name}: {self.text or self.file or self.image}"
+        return f"{self.sender.full_name}: {self.content[:30]}"
+
 
 
 class UnreadMessage(models.Model):

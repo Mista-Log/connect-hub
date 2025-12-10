@@ -12,7 +12,7 @@ from .serializers import RegisterSerializer, LoginSerializer
 from rest_framework import generics, permissions
 from .models import Conversation, Message, UnreadMessage, User
 from .serializers import ConversationSerializer, MessageSerializer, UserSerializer, ConversationCreateSerializer
-
+from .serializers import CreateMessageSerializer
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -102,30 +102,69 @@ class ConversationCreateView(generics.CreateAPIView):
             conversation.save()
 
 
-# List messages in a conversation
-class MessageListView(generics.ListAPIView):
-    serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
+class FetchMessagesView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        conv_id = self.kwargs["conversation_id"]
-        return Message.objects.filter(conversation__id=conv_id).order_by("created_at")
+    def get(self, request, conversation_id):
+        user = request.user
+
+        # Check if conversation exists
+        try:
+            conversation = Conversation.objects.get(id=conversation_id)
+        except Conversation.DoesNotExist:
+            return Response(
+                {"error": "Conversation does not exist."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if user is part of the conversation
+        if not conversation.members.filter(id=user.id).exists():
+            return Response(
+                {"error": "You are not a member of this conversation."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Fetch messages
+        messages = Message.objects.filter(
+            conversation=conversation
+        ).order_by("created_at")  # oldest first
+
+        serializer = MessageSerializer(messages, many=True)
+
+        return Response({
+            "conversation": str(conversation.id),
+            "messages": serializer.data
+        }, status=status.HTTP_200_OK)
 
 
-# Send a message
-class MessageCreateView(generics.CreateAPIView):
-    serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
-    def perform_create(self, serializer):
-        conversation = Conversation.objects.get(id=self.request.data["conversation"])
-        message = serializer.save(sender=self.request.user, conversation=conversation)
-        # Update last message in conversation
-        conversation.last_message = message
-        conversation.save()
-        # Create unread messages for other members
-        for member in conversation.members.exclude(id=self.request.user.id):
-            UnreadMessage.objects.create(user=member, message=message)
+
+class CreateMessageView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = CreateMessageSerializer(
+            data=request.data,
+            context={"request": request}
+        )
+
+        if serializer.is_valid():
+            message = serializer.save()
+
+            return Response({
+                "message": "Message sent successfully.",
+                "data": {
+                    "id": str(message.id),
+                    "conversation": str(message.conversation.id),
+                    "sender": message.sender.full_name,
+                    "content": message.content,
+                    "type": message.type,
+                    "created_at": message.created_at,
+                }
+            }, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class FindUserByEmailView(APIView):

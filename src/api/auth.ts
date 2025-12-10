@@ -1,4 +1,5 @@
 // src/api/auth.ts
+import axios from "axios";
 
 const API_BASE = "http://127.0.0.1:8000/api";
 
@@ -145,4 +146,37 @@ export const getUserConversations = async () => {
   }
 
   return response.json();
+};
+
+
+
+
+export const getMessages = async (conversationId: string) => {
+  const token = localStorage.getItem("access");
+  
+  const res = await axios.get(`${API_BASE}/messages/${conversationId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.data;
+};
+
+export const sendMessage = async (conversationId: string, content: string, type: string, file?: File) => {
+  const token = localStorage.getItem("access");
+
+  const formData = new FormData();
+  formData.append("conversation", conversationId);
+  formData.append("content", content);
+  formData.append("type", type);
+  if (file) formData.append("file", file);
+
+  const res = await axios.post(`${API_BASE}/messages/create/`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return res.data;
 };

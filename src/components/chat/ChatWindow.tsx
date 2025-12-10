@@ -3,6 +3,7 @@ import { Phone, Video, MoreVertical, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
+import { getMessages, sendMessage } from "@/api/auth";
 
 interface Message {
   id: string;
@@ -71,12 +72,16 @@ const initialMessages: Message[] = [
 ];
 
 interface ChatWindowProps {
-  chatId: string | null;
+  conversation: any | null;
 }
 
-const ChatWindow = ({ chatId }: ChatWindowProps) => {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+
+const ChatWindow = ({ conversation }: ChatWindowProps) => {
+  const chatId = conversation?.id || null;
+  // const [messages, setMessages] = useState<Message[]>(initialMessages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -86,20 +91,80 @@ const ChatWindow = ({ chatId }: ChatWindowProps) => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = (content: string, type: "text" | "file" | "image", file?: File) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      isOwn: true,
-      status: "sent",
-      type,
-      ...(type === "file" && { fileName: file?.name, fileSize: `${((file?.size || 0) / 1024 / 1024).toFixed(1)} MB` }),
-      ...(type === "image" && file && { imageUrl: URL.createObjectURL(file) }),
+  useEffect(() => {
+    if (!chatId) return;
+    setMessages([]);
+
+    const loadMessages = async () => {
+      try {
+        const data = await getMessages(chatId);
+        const formatted = data.map((msg: any) => ({
+          id: msg.id,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          isOwn: msg.sender_id === JSON.parse(localStorage.getItem("user") || "{}")?.id,
+          status: msg.status,
+          type: msg.type,
+          fileName: msg.file_name,
+          fileSize: msg.file_size,
+          imageUrl: msg.file_url
+        }));
+        setMessages(formatted);
+      } catch (error) {
+        console.error("Error loading chat messages:", error);
+      }
     };
 
-    setMessages([...messages, newMessage]);
+    loadMessages();
+  }, [chatId]);
+
+  
+
+  const handleSendMessage = async (
+    content: string,
+    type: "text" | "file" | "image",
+    file?: File
+  ) => {
+    if (!chatId) return;
+
+    try {
+      const sent = await sendMessage(chatId, content, type, file);
+
+      const newMessage: Message = {
+        id: sent.id,
+        content: sent.content,
+        timestamp: new Date(sent.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isOwn: true,
+        status: sent.status,
+        type: sent.type,
+        fileName: sent.file_name,
+        fileSize: sent.file_size,
+        imageUrl: sent.file_url,
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    }
   };
+
+
+  // const handleSendMessage = (content: string, type: "text" | "file" | "image", file?: File) => {
+  //   const newMessage: Message = {
+  //     id: Date.now().toString(),
+  //     content,
+  //     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  //     isOwn: true,
+  //     status: "sent",
+  //     type,
+  //     ...(type === "file" && { fileName: file?.name, fileSize: `${((file?.size || 0) / 1024 / 1024).toFixed(1)} MB` }),
+  //     ...(type === "image" && file && { imageUrl: URL.createObjectURL(file) }),
+  //   };
+
+  //   console.log(newMessage)
+
+  //   setMessages([...messages, newMessage]);
+  // };
 
   if (!chatId) {
     return (
@@ -133,8 +198,10 @@ const ChatWindow = ({ chatId }: ChatWindowProps) => {
             <div className="absolute bottom-0 right-0 w-3 h-3 bg-online rounded-full border-2 border-background" />
           </div>
           <div>
-            <h2 className="font-semibold text-foreground">Sarah Wilson</h2>
-            <p className="text-sm text-muted-foreground">Online</p>
+            <h2 className="font-semibold text-foreground">{conversation?.name}</h2>
+            <p className="text-sm text-muted-foreground">
+              {conversation?.online ? "Online" : "Offline"}
+            </p>
           </div>
         </div>
 

@@ -69,11 +69,54 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    sender = UserSerializer(read_only=True)
+    sender_name = serializers.CharField(source="sender.full_name", read_only=True)
+    sender_id = serializers.CharField(source="sender.id", read_only=True)
 
     class Meta:
         model = Message
-        fields = ["id", "conversation", "sender", "text", "image", "file", "created_at", "is_edited"]
+        fields = [
+            "id",
+            "conversation",
+            "sender_id",
+            "sender_name",
+            "content",
+            "type",
+            "created_at",
+            "is_edited",
+        ]
+
+
+class CreateMessageSerializer(serializers.ModelSerializer):
+    conversation = serializers.UUIDField()
+    content = serializers.CharField()
+    type = serializers.ChoiceField(choices=["text", "image", "file"])
+
+    class Meta:
+        model = Message
+        fields = ["conversation", "content", "type"]
+
+    def validate_conversation(self, conversation_id):
+        try:
+            return Conversation.objects.get(id=conversation_id)
+        except Conversation.DoesNotExist:
+            raise serializers.ValidationError("Conversation does not exist.")
+
+    def create(self, validated_data):
+        conversation = validated_data.pop("conversation")
+        user = self.context["request"].user
+
+        message = Message.objects.create(
+            conversation=conversation,
+            sender=user,
+            **validated_data
+        )
+
+        # update last message
+        conversation.last_message = message
+        conversation.save()
+
+        return message
+
 
 
 class ConversationCreateSerializer(serializers.ModelSerializer):
