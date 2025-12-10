@@ -80,6 +80,15 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
   const [newMember, setNewMember] = useState("");
   const [conversations, setConversations] = useState<any[]>([]);
 
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const getInitials = (name: string) => {
+    if (!name) return "??";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  };
+
+
   // const filteredConversations = mockConversations.filter((conv) =>
   //   conv.name.toLowerCase().includes(search.toLowerCase())
   // );
@@ -181,7 +190,7 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
               <MessageCircle className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="text-lg font-display font-semibold text-foreground">
-              Pulse<span className="text-primary">Chat</span>
+              Pulse<span className="text-gradient">Chat</span>
             </span>
           </div>
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
@@ -234,7 +243,8 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
 
             <Button
               onClick={handleCreateConversation}
-              // className="bg-primary text-white"
+              className="text-white"
+              variant="outline"
             >
               Create Conversation
             </Button>
@@ -316,17 +326,16 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
         <div className="flex items-center gap-3 p-2">
           <div className="relative">
             <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-medium text-primary-foreground">
-              JD
+              {getInitials(user.full_name)}
             </div>
             <div className="absolute bottom-0 right-0 w-3 h-3 bg-online rounded-full border-2 border-sidebar" />
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">John Doe</p>
+            <p className="text-sm font-medium truncate">{user.full_name}</p>
             <p className="text-xs text-muted-foreground">Online</p>
           </div>
 
-          {/* 🚀 Trigger the popup */}
           <Button
             variant="ghost"
             size="icon"
@@ -337,6 +346,7 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
           </Button>
         </div>
       </div>
+
 
       {/* 🚀 LOGOUT POPUP */}
       <Dialog open={open} onOpenChange={setOpen}>

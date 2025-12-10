@@ -20,7 +20,11 @@ export const loginUser = async (payload: LoginPayload) => {
     body: JSON.stringify(payload),
   });
 
+  
   const data = await res.json();
+
+  localStorage.setItem("user", JSON.stringify(data.user));
+
   if (!res.ok) {
     throw new Error(data.detail || Object.values(data)[0]);
   }
