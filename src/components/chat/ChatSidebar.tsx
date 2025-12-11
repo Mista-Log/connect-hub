@@ -7,7 +7,7 @@ import { logoutUser } from "@/api/auth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { createConversation, findUserByEmail, getUserConversations } from "@/api/auth"; // adjust the path
+import { createConversation, findUserByEmail, getUserConversations, updateUserProfile } from "@/api/auth"; // adjust the path
 
 interface Conversation {
   id: string;
@@ -80,6 +80,13 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
   const [newMember, setNewMember] = useState("");
   const [conversations, setConversations] = useState<any[]>([]);
 
+  // SETTINGS POPUP
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const [editFullName, setEditFullName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+
+
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const getInitials = (name: string) => {
     if (!name) return "??";
@@ -141,6 +148,30 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
     }
   };
 
+  const handleUpdateProfile = async () => {
+    try {
+      const payload = {
+        full_name: editFullName,
+        email: editEmail,
+      };
+
+      console.log(payload)
+      const updated = await updateUserProfile(payload);
+      
+
+      // update localStorage
+      localStorage.setItem("user", JSON.stringify(updated));
+
+      toast.success("Profile updated successfully!");
+
+      setSettingsOpen(false);
+      window.location.reload(); // update UI instantly
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update profile");
+    }
+  };
+
+
   useEffect(() => {
     const loadConversations = async () => {
       try {
@@ -150,6 +181,7 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
         // Transform data for UI
         const formatted = data.map((conv: any) => {
           const otherUser = conv.members.find((m: any) => m.id !== user.id);
+          const lastMsg = conv.last_message;
 
           return {
             id: conv.id,
@@ -159,11 +191,13 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
               .map((n: string) => n[0])
               .join("")
               .toUpperCase(),
-            lastMessage: "No messages yet...",
-            time: new Date(conv.updated_at).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
+            lastMessage: lastMsg ? lastMsg.content : "No messages yet...",
+            time: lastMsg
+              ? new Date(lastMsg.created_at).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "",
             unread: 0,
             online: false,
           };
@@ -193,7 +227,12 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
               Pulse<span className="text-gradient">Chat</span>
             </span>
           </div>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => setSettingsOpen(true)}
+          >
             <Settings className="w-5 h-5" />
           </Button>
         </div>
@@ -346,6 +385,43 @@ const ChatSidebar = ({ activeChat, onSelectChat }: ChatSidebarProps) => {
           </Button>
         </div>
       </div>
+
+      {/* 🚀 USER SETTINGS POPUP */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1">
+              <label className="text-sm text-muted-foreground">Full Name</label>
+              <Input
+                value={editFullName}
+                onChange={(e) => setEditFullName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm text-muted-foreground">Email</label>
+              <Input
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setSettingsOpen(false)}>
+              Cancel
+            </Button>
+
+            <Button className="text-white" variant="outline" onClick={handleUpdateProfile}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
       {/* 🚀 LOGOUT POPUP */}

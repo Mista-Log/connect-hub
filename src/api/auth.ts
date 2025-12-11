@@ -180,3 +180,25 @@ export const sendMessage = async (conversationId: string, content: string, type:
 
   return res.data;
 };
+
+
+export const updateUserProfile = async (payload: any) => {
+  const token = localStorage.getItem("access");
+
+  const res = await fetch(`${API_BASE}/user/update/`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`, // attach token here
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.detail || "Failed to update profile");
+  }
+
+  return await res.json();
+};
+

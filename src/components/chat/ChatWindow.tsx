@@ -217,7 +217,7 @@ const ChatWindow = ({ conversation }: ChatWindowProps) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        {/* <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
             <Search className="w-5 h-5" />
           </Button>
@@ -230,7 +230,7 @@ const ChatWindow = ({ conversation }: ChatWindowProps) => {
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
             <MoreVertical className="w-5 h-5" />
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {/* Messages */}

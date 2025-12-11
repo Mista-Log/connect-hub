@@ -1,6 +1,7 @@
 from django.shortcuts import render
 
 # Create your views here.
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -13,6 +14,7 @@ from rest_framework import generics, permissions
 from .models import Conversation, Message, UnreadMessage, User
 from .serializers import ConversationSerializer, MessageSerializer, UserSerializer, ConversationCreateSerializer
 from .serializers import CreateMessageSerializer
+from rest_framework.generics import UpdateAPIView
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -82,6 +84,13 @@ class LogoutView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UpdateUserProfileView(UpdateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
 # List all conversations for the logged-in user
 class ConversationListView(generics.ListAPIView):
     serializer_class = ConversationSerializer
@@ -139,6 +148,32 @@ class FetchMessagesView(APIView):
 
 
 
+# class CreateMessageView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request):
+#         serializer = CreateMessageSerializer(
+#             data=request.data,
+#             context={"request": request}
+#         )
+
+#         if serializer.is_valid():
+#             message = serializer.save()
+
+#             return Response({
+#                 "message": "Message sent successfully.",
+#                 "data": {
+#                     "id": str(message.id),
+#                     "conversation": str(message.conversation.id),
+#                     "sender": message.sender.full_name,
+#                     "content": message.content,
+#                     "type": message.type,
+#                     "created_at": message.created_at,
+#                 }
+#             }, status=status.HTTP_201_CREATED)
+
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class CreateMessageView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -156,12 +191,18 @@ class CreateMessageView(APIView):
                 "data": {
                     "id": str(message.id),
                     "conversation": str(message.conversation.id),
-                    "sender": message.sender.full_name,
+                    "sender_id": message.sender.id,
                     "content": message.content,
                     "type": message.type,
-                    "created_at": message.created_at,
+                    "timestamp": message.created_at,
+
+                    # required for frontend
+                    "file_url": settings.MEDIA_URL + message.content if message.type != "text" else None,
+                    "file_name": message.content.split("/")[-1] if message.type != "text" else None,
+                    "file_size": request.FILES.get("file").size if request.FILES.get("file") else None,
                 }
             }, status=status.HTTP_201_CREATED)
+
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
