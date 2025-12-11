@@ -1,7 +1,7 @@
 // src/api/auth.ts
 import axios from "axios";
 
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = process.env.VITE_API_BASE_URL;
 
 export interface LoginPayload {
   email: string;
@@ -15,7 +15,7 @@ export interface SignupPayload {
 }
 
 export const loginUser = async (payload: LoginPayload) => {
-  const res = await fetch(`${API_BASE}/auth/login/`, {
+  const res = await fetch(`${API_BASE}/api/auth/login/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -34,7 +34,7 @@ export const loginUser = async (payload: LoginPayload) => {
 };
 
 export const signupUser = async (payload: SignupPayload) => {
-  const res = await fetch(`${API_BASE}/auth/register/`, {
+  const res = await fetch(`${API_BASE}/api/auth/register/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -57,7 +57,7 @@ export const logoutUser = async () => {
     throw new Error("No refresh token found");
   }
 
-  const response = await fetch(`${API_BASE}/auth/logout/`, {
+  const response = await fetch(`${API_BASE}/api/auth/logout/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -90,7 +90,7 @@ export const logoutUser = async () => {
 export const findUserByEmail = async (email: string) => {
   const token = localStorage.getItem("access");
 
-  const response = await fetch(`http://127.0.0.1:8000/api/users/find/?email=${email}`, {
+  const response = await fetch(`${API_BASE}/api/users/find/?email=${email}`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -113,7 +113,7 @@ export const createConversation = async (memberId: string) => {
     is_group: false,
   };
 
-  const response = await fetch(`${API_BASE}/conversations/create/`, {
+  const response = await fetch(`${API_BASE}/api/conversations/create/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -134,7 +134,7 @@ export const createConversation = async (memberId: string) => {
 export const getUserConversations = async () => {
   const token = localStorage.getItem("access");
 
-  const response = await fetch("http://127.0.0.1:8000/api/conversations/", {
+  const response = await fetch(`${API_BASE}/api/conversations/`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -154,7 +154,7 @@ export const getUserConversations = async () => {
 export const getMessages = async (conversationId: string) => {
   const token = localStorage.getItem("access");
   
-  const res = await axios.get(`${API_BASE}/messages/${conversationId}`, {
+  const res = await axios.get(`${API_BASE}/api/messages/${conversationId}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -171,7 +171,7 @@ export const sendMessage = async (conversationId: string, content: string, type:
   formData.append("type", type);
   if (file) formData.append("file", file);
 
-  const res = await axios.post(`${API_BASE}/messages/create/`, formData, {
+  const res = await axios.post(`${API_BASE}/api/messages/create/`, formData, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "multipart/form-data",
@@ -185,7 +185,7 @@ export const sendMessage = async (conversationId: string, content: string, type:
 export const updateUserProfile = async (payload: any) => {
   const token = localStorage.getItem("access");
 
-  const res = await fetch(`${API_BASE}/user/update/`, {
+  const res = await fetch(`${API_BASE}/api/user/update/`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
