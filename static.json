@@ -1,6 +1,5 @@
 {
-  "root": "build/",
-  "routes": {
-    "/**": "index.html"
-  }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
+  ]
 }
