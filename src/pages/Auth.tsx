@@ -153,9 +153,9 @@ const Auth = () => {
 
             {isLogin && (
               <div className="text-right">
-                <button type="button" className="text-sm text-foreground hover:underline">
+                {/* <button type="button" className="text-sm text-foreground hover:underline">
                   Forgot password?
-                </button>
+                </button> */}
               </div>
             )}
 
